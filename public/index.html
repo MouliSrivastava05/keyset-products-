@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Fast products browser using keyset pagination on 200,000 products.">
+  <title>Keyset Product Portal</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient-start: #0f172a;
+      --bg-gradient-end: #020617;
+      --glass-bg: rgba(30, 41, 59, 0.45);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --success: #34d399;
+      --row-hover: rgba(56, 189, 248, 0.04);
+      --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --font-sans: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #ffffff, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      font-weight: 400;
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-end;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1 1 200px;
+    }
+
+    .control-group label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .control-group select {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .control-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    /* Stats Board */
+    .stats-board {
+      flex: 2 1 300px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat-value.success {
+      color: var(--success);
+    }
+
+    .stat-value.code {
+      font-family: monospace;
+      font-size: 0.85rem;
+      word-break: break-all;
+      color: #cbd5e1;
+      max-height: 40px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    /* Products Table Section */
+    .table-container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+      margin-bottom: 2rem;
+      animation: fadeIn 1s ease-out;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.4);
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--glass-border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+      transition: background-color 0.2s ease;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr {
+      transition: all 0.2s ease;
+    }
+
+    tr.product-row:hover td {
+      background-color: var(--row-hover);
+      color: #fff;
+    }
+
+    .product-name {
+      font-weight: 500;
+    }
+
+    .product-category {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+      display: inline-block;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .product-price {
+      font-family: monospace;
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .product-date {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .product-id {
+      font-family: monospace;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+
+    /* Actions Section */
+    .actions-section {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 4rem;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #020617;
+      border: none;
+      border-radius: 8px;
+      padding: 0.875rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 14px var(--accent-glow);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--accent-glow);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid rgba(2, 6, 23, 0.3);
+      border-top-color: #020617;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    .btn.loading .spinner {
+      display: inline-block;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 4rem 2rem;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .empty-state p {
+      margin-top: 0.5rem;
+      font-size: 1.1rem;
+    }
+
+    /* Animations */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in-row {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .controls-panel {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .stats-board {
+        grid-template-columns: 1fr 1fr;
+      }
+      
+      th:nth-child(4), td:nth-child(4),
+      th:nth-child(5), td:nth-child(5) {
+        display: none; /* Hide date and id on mobile to prevent overflow */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Keyset Product Portal</h1>
+      <p>Blazing-fast deterministic pagination across 200,000 products</p>
+    </header>
+
+    <!-- Controls -->
+    <div class="controls-panel">
+      <div class="control-group">
+        <label for="category-select">Filter Category</label>
+        <select id="category-select">
+          <option value="">All Categories</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="limit-select">Page Size</label>
+        <select id="limit-select">
+          <option value="10">10 items</option>
+          <option value="20" selected>20 items</option>
+          <option value="50">50 items</option>
+          <option value="100">100 items</option>
+        </select>
+      </div>
+
+      <div class="stats-board">
+        <div class="stat-card">
+          <span class="stat-label">Response Time</span>
+          <span id="stat-latency" class="stat-value">-</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Loaded</span>
+          <span id="stat-count" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Next Cursor (Base64)</span>
+          <span id="stat-cursor" class="stat-value code">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="table-container">
+      <table id="products-table">
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Created At (UTC)</th>
+            <th>Product UUID</th>
+          </tr>
+        </thead>
+        <tbody id="products-tbody">
+          <!-- Dynamically populated rows -->
+        </tbody>
+      </table>
+      <div id="table-empty" class="empty-state" style="display: none;">
+        <p>No products found matching the search criteria.</p>
+      </div>
+    </div>
+
+    <!-- Load More -->
+    <div class="actions-section">
+      <button id="load-more-btn" class="btn">
+        <span class="spinner"></span>
+        <span id="btn-text">Load More Products</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // App State
+    let nextCursor = null;
+    let productsLoaded = 0;
+    let currentCategory = '';
+    let currentLimit = 20;
+
+    // DOM Elements
+    const categorySelect = document.getElementById('category-select');
+    const limitSelect = document.getElementById('limit-select');
+    const productsTbody = document.getElementById('products-tbody');
+    const tableEmpty = document.getElementById('table-empty');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const btnText = document.getElementById('btn-text');
+    const statLatency = document.getElementById('stat-latency');
+    const statCount = document.getElementById('stat-count');
+    const statCursor = document.getElementById('stat-cursor');
+
+    // Initialize UI
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchCategories();
+      fetchProducts(true); // Initial fetch (reset table)
+    });
+
+    // Event Listeners
+    categorySelect.addEventListener('change', (e) => {
+      currentCategory = e.target.value;
+      nextCursor = null;
+      fetchProducts(true);
+    });
+
+    limitSelect.addEventListener('change', (e) => {
+      currentLimit = parseInt(e.target.value, 10);
+      nextCursor = null;
+      fetchProducts(true);
+    });
+
+    loadMoreBtn.addEventListener('click', () => {
+      if (!loadMoreBtn.disabled) {
+        fetchProducts(false);
+      }
+    });
+
+    // Fetch unique categories list
+    async function fetchCategories() {
+      try {
+        const res = await fetch('/categories');
+        const data = await res.json();
+        if (data.categories) {
+          data.categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categorySelect.appendChild(option);
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    }
+
+    // Fetch products (supports initial load and load more)
+    async function fetchProducts(reset = false) {
+      if (reset) {
+        productsLoaded = 0;
+        nextCursor = null;
+        productsTbody.innerHTML = '';
+        loadMoreBtn.disabled = false;
+        btnText.textContent = 'Load More Products';
+      }
+
+      loadMoreBtn.classList.add('loading');
+      loadMoreBtn.disabled = true;
+
+      // Construct URL
+      let url = `/products?limit=${currentLimit}`;
+      if (currentCategory) {
+        url += `&category=${encodeURIComponent(currentCategory)}`;
+      }
+      if (nextCursor) {
+        url += `&cursor=${nextCursor}`;
+      }
+
+      const startTime = performance.now();
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        const latency = (performance.now() - startTime).toFixed(0);
+        statLatency.textContent = `${latency} ms`;
+
+        if (data.data && data.data.length > 0) {
+          tableEmpty.style.display = 'none';
+          appendProductsToTable(data.data);
+          
+          nextCursor = data.next_cursor;
+          productsLoaded += data.data.length;
+          
+          statCount.textContent = productsLoaded.toLocaleString();
+          statCursor.textContent = nextCursor || 'None (End of Dataset)';
+
+          if (!nextCursor) {
+            loadMoreBtn.disabled = true;
+            btnText.textContent = 'All Products Loaded';
+          } else {
+            loadMoreBtn.disabled = false;
+            btnText.textContent = 'Load More Products';
+          }
+        } else {
+          if (reset) {
+            tableEmpty.style.display = 'block';
+            statCount.textContent = '0';
+            statCursor.textContent = 'None';
+          }
+          loadMoreBtn.disabled = true;
+          btnText.textContent = 'No More Products';
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        btnText.textContent = 'Error Loading Products';
+      } finally {
+        loadMoreBtn.classList.remove('loading');
+      }
+    }
+
+    // Render product rows helper
+    function appendProductsToTable(products) {
+      const fragment = document.createDocumentFragment();
+
+      products.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'product-row fade-in-row';
+
+        // Format Date
+        const date = new Date(p.created_at);
+        const formattedDate = date.toISOString().replace('T', ' ').substring(0, 19);
+
+        // Price formatting
+        const price = parseFloat(p.price).toFixed(2);
+
+        tr.innerHTML = `
+          <td><span class="product-name">${escapeHTML(p.name)}</span></td>
+          <td><span class="product-category">${escapeHTML(p.category)}</span></td>
+          <td><span class="product-price">$${price}</span></td>
+          <td><span class="product-date">${formattedDate}</span></td>
+          <td><span class="product-id">${p.id}</span></td>
+        `;
+        fragment.appendChild(tr);
+      });
+
+      productsTbody.appendChild(fragment);
+    }
+
+    // Basic HTML escaping helper to prevent XSS
+    function escapeHTML(str) {
+      if (!str) return '';
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>
